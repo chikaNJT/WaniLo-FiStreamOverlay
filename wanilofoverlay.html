@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WaniLo-Fi Stream Overlay</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: rgba(255,255,255,0.3);
+            font-family: cursive;
+            /* === Ini buat ganti warna text menit === */
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            overflow: hidden;
+            opacity: 0;
+            animation: fadeIn 0s ease-in forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .container {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            /* === Ini buat atur lebar overlay === */
+            width: 550px;
+            padding: 15px;
+            background: rgb(46, 44, 53);
+            border-radius: 15px;
+            transition: all 0.5s ease-in-out;
+        }
+
+        .container.changing {
+            opacity: 0;
+            transform: translateX(100px);
+            transition: opacity 0.5s, transform 0.5s;
+        }
+
+        .disk {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: url('https://static.vecteezy.com/system/resources/previews/009/303/633/non_2x/record-disk-clipart-design-illustration-free-png.png') no-repeat center;
+            background-size: cover;
+            border: 3px solid #fff;
+            animation: rotate 4s linear infinite;
+            flex-shrink: 0;
+        }
+
+        .disk.paused {
+            animation-play-state: paused;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .track-info {
+            flex-grow: 1;
+            min-width: 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .title {
+            font-size: 30px;
+            white-space: nowrap;
+            overflow: hidden;
+            /* === Ini buat ganti warna text judul === */
+            color: rgb(255, 217, 0);
+            display: inline-block;
+            position: relative;
+            width: 100%;
+            text-align: left;
+        }
+
+
+        .progress-container {
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.3);
+            margin-top: 10px;
+            border-radius: 2px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .progress-bar {
+            height: 100%;
+            /* === Ini buat ganti warna progress bar === */
+            background: #ff0000;
+            width: 0%;
+            border-radius: 2px;
+            transition: width 0.1s linear;
+        }
+
+        .time-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="container">
+        <div class="disk" id="disk"></div>
+        <div class="track-info">
+            <div id="title" class="title">Memuat...</div>
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar" id="progress"></div>
+            </div>
+            <div class="time-info">
+                <span id="currentTime">0:00</span>
+                <span id="duration">0:00</span>
+            </div>
+        </div>
+    </div>
+
+    <audio id="audioPlayer"></audio>
+
+    <script>
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progress');
+        const audio = document.getElementById('audioPlayer');
+        const container = document.getElementById('container');
+        const titleElement = document.getElementById('title');
+        const disk = document.getElementById('disk');
+        const currentTimeEl = document.getElementById('currentTime');
+        const durationEl = document.getElementById('duration');
+        
+        let tracks = [
+            "https://od.lk/d/ODlfMzE5ODQyNTFf/Caf%C3%A9%20Noir.mp3",
+            "https://od.lk/d/ODlfMzE5NzU3MzFf/Cloudy%20Nostalgia.mp3",
+            "https://od.lk/d/ODlfMzE5ODQxODhf/Eternal%20Coffee.mp3",
+            "https://od.lk/d/ODlfMzE5ODQyNDhf/Midnight%20Espresso.mp3",
+            "https://od.lk/d/ODlfMzE5ODQyOTNf/Midnight%20Rain.mp3",
+            "https://od.lk/d/ODlfMzE5ODQyOTZf/Midnight%20Reverie.mp3",
+            "https://od.lk/d/ODlfMzE5NzU3OTRf/Midnight%20Whispers.mp3",
+            "https://od.lk/d/ODlfMzE5ODQyNDNf/Saxophone%20Whispers.mp3",
+            "https://od.lk/d/ODlfMzE5ODQyNDZf/Serene%20Raindrops.mp3"
+
+        ];
+        let trackIndex = 0;
+
+        function updateTrack() {
+            container.classList.add('changing');
+            setTimeout(() => {
+                let trackUrl = tracks[trackIndex];
+                audio.src = trackUrl;
+                let title = decodeURIComponent(trackUrl.split('/').pop().replace('.mp3', '').replace(/%20/g, ' '));
+                titleElement.textContent = title;
+                container.classList.remove('changing');
+                audio.play();
+            }, 500);
+        }
+
+        function updateProgress() {
+            const progressPercent = (audio.currentTime / audio.duration) * 100;
+            progressBar.style.width = `${progressPercent}%`;
+            currentTimeEl.textContent = formatTime(audio.currentTime);
+            durationEl.textContent = formatTime(audio.duration);
+        }
+
+        function formatTime(time) {
+            const minutes = Math.floor(time / 60);
+            const seconds = Math.floor(time % 60);
+            return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+        }
+
+        function seek(e) {
+            const width = progressContainer.clientWidth;
+            const clickX = e.offsetX;
+            const duration = audio.duration;
+            audio.currentTime = (clickX / width) * duration;
+        }
+
+        progressContainer.addEventListener('click', seek);
+        audio.addEventListener('timeupdate', updateProgress);
+        audio.addEventListener('ended', () => {
+            trackIndex = (trackIndex + 1) % tracks.length;
+            updateTrack();
+        });
+
+        window.onload = updateTrack;
+    </script>
+</body>
+</html>
